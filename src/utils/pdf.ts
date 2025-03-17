@@ -1,11 +1,11 @@
 
-// Mock PDF processing functions for the frontend
+// Mock PDF processing functions for the frontend when backend is not available
 // In a real application, these would interface with a backend
 
 /**
- * Simulates uploading a PDF file to a server
+ * Simulates uploading a PDF file to a server (Fallback mock)
  */
-export const uploadPDF = async (file: File): Promise<{ id: string }> => {
+export const uploadPDFMock = async (file: File): Promise<{ id: string }> => {
   // Simulate network request
   await new Promise(resolve => setTimeout(resolve, 1500));
   
@@ -16,9 +16,9 @@ export const uploadPDF = async (file: File): Promise<{ id: string }> => {
 };
 
 /**
- * Simulates getting a summary from a PDF file
+ * Simulates getting a summary from a PDF file (Fallback mock)
  */
-export const getSummary = async (fileId: string): Promise<string> => {
+export const getSummaryMock = async (fileId: string): Promise<string> => {
   // Simulate network request and processing time
   await new Promise(resolve => setTimeout(resolve, 2000));
   
@@ -36,3 +36,8 @@ The research demonstrates that users complete tasks 20% faster when interacting 
 
 The document concludes with practical recommendations for implementing these findings, suggesting that designers should start with essential functionality and carefully evaluate each additional element before inclusion.`;
 };
+
+// Note: These functions are now moved to api.ts for real implementation
+// The functions are kept here for backwards compatibility and as fallback
+export const uploadPDF = uploadPDFMock;
+export const getSummary = getSummaryMock;

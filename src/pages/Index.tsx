@@ -1,17 +1,32 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Header from '@/components/Header';
 import FileUpload from '@/components/FileUpload';
 import SummaryView from '@/components/SummaryView';
 import Button from '@/components/Button';
-import { uploadPDF, getSummary } from '@/utils/pdf';
+import { uploadPDF, getSummary, checkBackendHealth } from '@/utils/api';
 import { toast } from 'sonner';
+import BackendStatus from '@/components/BackendStatus';
 
 const Index = () => {
   const [file, setFile] = useState<File | null>(null);
   const [summary, setSummary] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [viewMode, setViewMode] = useState<'upload' | 'summary'>('upload');
+  const [backendStatus, setBackendStatus] = useState<'online' | 'offline' | 'checking'>('checking');
+  
+  useEffect(() => {
+    const checkStatus = async () => {
+      const isOnline = await checkBackendHealth();
+      setBackendStatus(isOnline ? 'online' : 'offline');
+    };
+    
+    checkStatus();
+    // Periodically check backend status
+    const intervalId = setInterval(checkStatus, 30000); // every 30 seconds
+    
+    return () => clearInterval(intervalId);
+  }, []);
   
   const handleFileSelect = (selectedFile: File) => {
     setFile(selectedFile);
@@ -24,6 +39,11 @@ const Index = () => {
   
   const handleProcessFile = async () => {
     if (!file) return;
+    
+    if (backendStatus === 'offline') {
+      toast.error('Backend service is offline. Please try again later.');
+      return;
+    }
     
     try {
       setIsProcessing(true);
@@ -55,6 +75,8 @@ const Index = () => {
       <Header />
       
       <main className="flex-1 container mx-auto px-4 pt-28 pb-16 max-w-5xl">
+        <BackendStatus status={backendStatus} />
+        
         {viewMode === 'upload' ? (
           <div className="space-y-8 animate-fade-in">
             <div className="text-center space-y-2 max-w-2xl mx-auto">
