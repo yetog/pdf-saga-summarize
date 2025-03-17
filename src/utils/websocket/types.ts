@@ -11,6 +11,12 @@ export interface WebSocketMessage {
   payload: any;
 }
 
+export interface QueuedMessage extends WebSocketMessage {
+  id: string;
+  timestamp: number;
+  attempts: number;
+}
+
 export interface WebSocketServiceInterface {
   connect(): void;
   disconnect(): void;
@@ -19,3 +25,4 @@ export interface WebSocketServiceInterface {
   subscribeToConnection(handler: ConnectionChangeHandler): () => void;
   isSocketConnected(): boolean;
 }
+

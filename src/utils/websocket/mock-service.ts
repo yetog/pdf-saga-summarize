@@ -3,32 +3,88 @@
  * Mock WebSocket service implementation for development
  */
 import { BaseWebSocketService } from './base-service';
+import { toast } from "sonner";
 
 export class MockWebSocketService extends BaseWebSocketService {
+  private mockConnected = true;
+  private mockConnectionTimeout: number | null = null;
+
   constructor() {
     super();
     this.isConnected = true;
+    
+    // Process any queued messages immediately
+    setTimeout(() => {
+      this.processQueue();
+    }, 500);
   }
   
   public connect(): void {
     // Simulate successful connection after a delay
-    setTimeout(() => {
+    if (!this.mockConnected) {
+      console.log('Mock WebSocket reconnecting...');
+      this.mockConnectionTimeout = window.setTimeout(() => {
+        this.mockConnected = true;
+        this.notifyConnectionHandlers(true);
+        toast.success('WebSocket connection restored');
+        this.processQueue();
+      }, 2000);
+    } else {
       this.notifyConnectionHandlers(true);
-    }, 500);
+    }
   }
   
   public disconnect(): void {
+    if (this.mockConnectionTimeout) {
+      clearTimeout(this.mockConnectionTimeout);
+      this.mockConnectionTimeout = null;
+    }
+    
+    this.mockConnected = false;
     this.notifyConnectionHandlers(false);
   }
   
   public send(type: string, payload: any): boolean {
     console.log('Mock WebSocket send:', { type, payload });
     
+    if (!this.mockConnected) {
+      console.log('Mock WebSocket not connected, queueing message');
+      this.queueMessage(type, payload);
+      return false;
+    }
+    
     // Simulate processing and response for summarization requests
     if (type === 'request_summary') {
       setTimeout(() => {
         this.handleMockSummaryResponse(payload.id);
       }, 3000);
+    } else if (type === 'heartbeat') {
+      // Respond to heartbeats immediately
+      setTimeout(() => {
+        if (this.messageHandlers.has('pong')) {
+          this.messageHandlers.get('pong')?.forEach(handler => {
+            handler({ timestamp: Date.now() });
+          });
+        }
+      }, 50);
+    }
+    
+    // Occasionally simulate network issues for testing the queue
+    if (Math.random() < 0.1) {
+      console.log('Simulating temporary WebSocket disconnection for testing');
+      this.mockConnected = false;
+      this.notifyConnectionHandlers(false);
+      toast.error('WebSocket connection lost (simulated)');
+      
+      // Reconnect after a few seconds
+      this.mockConnectionTimeout = window.setTimeout(() => {
+        this.mockConnected = true;
+        this.notifyConnectionHandlers(true);
+        toast.success('WebSocket connection restored');
+        this.processQueue();
+      }, 5000);
+      
+      return false;
     }
     
     return true;
@@ -64,3 +120,4 @@ The document concludes with practical recommendations for implementing these fin
 
 // Export a singleton mock instance
 export const mockWebSocketService = new MockWebSocketService();
+
