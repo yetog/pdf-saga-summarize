@@ -10,13 +10,19 @@ import ProcessFile from '@/components/ProcessFile';
 import Footer from '@/components/Footer';
 
 const Index = () => {
+  // File handling state
   const [file, setFile] = useState<File | null>(null);
   const [summary, setSummary] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [viewMode, setViewMode] = useState<'upload' | 'summary'>('upload');
+  
+  // Backend connection state
   const [backendStatus, setBackendStatus] = useState<'online' | 'offline' | 'checking'>('checking');
   const [wsConnected, setWsConnected] = useState<boolean | undefined>(undefined);
+  
+  // Error handling state
+  const [uploadError, setUploadError] = useState<string | null>(null);
   
   // Initialize WebSocket on component mount
   useEffect(() => {
@@ -35,8 +41,13 @@ const Index = () => {
   // Check backend health periodically
   useEffect(() => {
     const checkStatus = async () => {
-      const isOnline = await checkBackendHealth();
-      setBackendStatus(isOnline ? 'online' : 'offline');
+      try {
+        const isOnline = await checkBackendHealth();
+        setBackendStatus(isOnline ? 'online' : 'offline');
+      } catch (error) {
+        setBackendStatus('offline');
+        console.error('Failed to check backend status:', error);
+      }
     };
     
     checkStatus();
@@ -48,6 +59,8 @@ const Index = () => {
   
   const handleFileSelect = (selectedFile: File) => {
     setFile(selectedFile);
+    setUploadError(null);
+    
     // Reset summary when a new file is selected
     if (summary) {
       setSummary(null);
@@ -58,7 +71,7 @@ const Index = () => {
   const handleProcessFile = async () => {
     if (!file) return;
     
-    if (backendStatus === 'offline') {
+    if (backendStatus === 'offline' && !API.useMockApi) {
       toast.error('Backend service is offline. Please try again later.');
       return;
     }
@@ -66,6 +79,7 @@ const Index = () => {
     try {
       setIsProcessing(true);
       setProgress(0);
+      setUploadError(null);
       
       // Upload the file
       const { id } = await uploadPDF(file);
@@ -86,15 +100,18 @@ const Index = () => {
           }
         );
       } else {
-        // Fallback to synchronous method
+        // Fallback to synchronous method or mock API
         const result = await getSummary(id);
         setSummary(result);
         setViewMode('summary');
+        setIsProcessing(false);
         toast.success('Summary generated successfully');
       }
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
       console.error('Error processing file:', error);
-      toast.error('Failed to process PDF');
+      toast.error(`Failed to process PDF: ${errorMessage}`);
+      setUploadError(errorMessage);
       setIsProcessing(false);
     }
   };

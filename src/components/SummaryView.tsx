@@ -2,6 +2,8 @@
 import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
 import Button from './Button';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface SummaryViewProps {
   summary: string;
@@ -17,6 +19,7 @@ const SummaryView: React.FC<SummaryViewProps> = ({
   onBack
 }) => {
   const [copied, setCopied] = useState(false);
+  const isMobile = useIsMobile();
   
   const handleCopy = async () => {
     try {
@@ -38,9 +41,36 @@ const SummaryView: React.FC<SummaryViewProps> = ({
     document.body.removeChild(element);
   };
   
+  // Loading skeleton when summary is empty but expected
+  if (!summary) {
+    return (
+      <div className={cn("w-full animate-fade-up", className)}>
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <Skeleton className="h-6 w-16" />
+            <Skeleton className="h-8 w-40 mt-2" />
+            <Skeleton className="h-4 w-32 mt-2" />
+          </div>
+          <div className="flex space-x-2">
+            <Skeleton className="h-9 w-16" />
+            <Skeleton className="h-9 w-24" />
+          </div>
+        </div>
+        <div className="bg-background rounded-xl border border-border p-6 mb-6">
+          <Skeleton className="h-4 w-full mb-4" />
+          <Skeleton className="h-4 w-5/6 mb-4" />
+          <Skeleton className="h-4 w-full mb-4" />
+          <Skeleton className="h-4 w-4/6 mb-4" />
+          <Skeleton className="h-4 w-full mb-4" />
+          <Skeleton className="h-4 w-5/6" />
+        </div>
+      </div>
+    );
+  }
+  
   return (
     <div className={cn("w-full animate-fade-up", className)}>
-      <div className="flex items-center justify-between mb-6">
+      <div className={`flex ${isMobile ? 'flex-col space-y-4' : 'items-center justify-between'} mb-6`}>
         <div>
           <button 
             onClick={onBack}
@@ -68,11 +98,12 @@ const SummaryView: React.FC<SummaryViewProps> = ({
           </p>
         </div>
         
-        <div className="flex space-x-2">
+        <div className={`flex space-x-2 ${isMobile ? 'w-full' : ''}`}>
           <Button 
             variant="outline" 
             size="sm"
             onClick={handleCopy}
+            className={isMobile ? "flex-1" : ""}
           >
             {copied ? 'Copied!' : 'Copy'}
           </Button>
@@ -80,6 +111,7 @@ const SummaryView: React.FC<SummaryViewProps> = ({
             variant="primary" 
             size="sm"
             onClick={handleDownload}
+            className={isMobile ? "flex-1" : ""}
           >
             Download
           </Button>
