@@ -14,10 +14,12 @@ const config: CapacitorConfig = {
     ]
   },
   ios: {
-    contentInset: 'always'
+    contentInset: 'always',
+    webViewHandleInternalUrls: true,
   },
   android: {
-    captureInput: true
+    captureInput: true,
+    allowMixedContent: true,
   }
 };
 
