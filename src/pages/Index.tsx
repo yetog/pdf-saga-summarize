@@ -8,6 +8,7 @@ import BackendStatus from '@/components/BackendStatus';
 import { API } from '@/config';
 import ProcessFile from '@/components/ProcessFile';
 import Footer from '@/components/Footer';
+import ChatBot from '@/components/chat/ChatBot';
 
 const Index = () => {
   // File handling state
@@ -146,6 +147,14 @@ const Index = () => {
       </main>
       
       <Footer />
+      
+      {/* Add the ChatBot component if we have a file and summary */}
+      {file && summary && (
+        <ChatBot 
+          summary={summary} 
+          fileName={file.name}
+        />
+      )}
     </div>
   );
 };
