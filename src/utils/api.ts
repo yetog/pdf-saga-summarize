@@ -1,8 +1,6 @@
-
 import { toast } from "sonner";
 import { API } from "@/config";
 import { getWebSocketService } from "./websocket";
-import { mockWebSocketService } from "./websocket";
 
 // Error handling utility
 const handleApiError = (error: unknown) => {

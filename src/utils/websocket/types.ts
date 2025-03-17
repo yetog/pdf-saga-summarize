@@ -1,0 +1,21 @@
+
+/**
+ * WebSocket service types
+ */
+
+export type MessageHandler = (data: any) => void;
+export type ConnectionChangeHandler = (isConnected: boolean) => void;
+
+export interface WebSocketMessage {
+  type: string;
+  payload: any;
+}
+
+export interface WebSocketServiceInterface {
+  connect(): void;
+  disconnect(): void;
+  send(type: string, payload: any): boolean;
+  subscribe(type: string, handler: MessageHandler): () => void;
+  subscribeToConnection(handler: ConnectionChangeHandler): () => void;
+  isSocketConnected(): boolean;
+}
