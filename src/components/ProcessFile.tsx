@@ -2,6 +2,7 @@
 import React from 'react';
 import Button from '@/components/Button';
 import FileUpload from '@/components/FileUpload';
+import FeatureHighlights from '@/components/FeatureHighlights';
 
 interface ProcessFileProps {
   file: File | null;
