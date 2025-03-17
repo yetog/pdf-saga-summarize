@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { Menu, X } from 'lucide-react';
 
 interface HeaderProps {
   className?: string;
@@ -9,6 +10,7 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ className }) => {
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   
   useEffect(() => {
     const handleScroll = () => {
@@ -21,6 +23,10 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
     };
   }, []);
   
+  const toggleMenu = () => {
+    setIsMenuOpen(!isMenuOpen);
+  };
+  
   return (
     <header
       className={cn(
@@ -31,7 +37,7 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
         className
       )}
     >
-      <div className="container mx-auto flex items-center justify-between px-4 md:px-6">
+      <div className="container mx-auto flex items-center justify-between px-4">
         <Link 
           to="/" 
           className="text-2xl font-medium tracking-tighter transition-opacity hover:opacity-80"
@@ -39,6 +45,16 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
           PDF Saga
         </Link>
         
+        {/* Mobile menu button */}
+        <button 
+          className="md:hidden p-2 text-foreground"
+          onClick={toggleMenu}
+          aria-label="Toggle menu"
+        >
+          {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
+        </button>
+        
+        {/* Desktop navigation */}
         <nav className="hidden md:flex items-center space-x-6">
           <Link 
             to="/" 
@@ -59,6 +75,35 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
             Contact
           </Link>
         </nav>
+        
+        {/* Mobile menu */}
+        {isMenuOpen && (
+          <div className="absolute top-full left-0 right-0 bg-background border-b border-border/50 shadow-lg md:hidden animate-in slide-in-from-top-5">
+            <nav className="container mx-auto py-4 px-4 flex flex-col space-y-4">
+              <Link 
+                to="/" 
+                className="text-lg text-foreground/80 transition-colors hover:text-foreground"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Home
+              </Link>
+              <Link 
+                to="/about" 
+                className="text-lg text-foreground/80 transition-colors hover:text-foreground"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                About
+              </Link>
+              <Link 
+                to="/contact" 
+                className="text-lg text-foreground/80 transition-colors hover:text-foreground"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Contact
+              </Link>
+            </nav>
+          </div>
+        )}
       </div>
     </header>
   );
