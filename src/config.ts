@@ -36,6 +36,10 @@ export const APP_CONFIG = {
   // WebSocket configuration
   wsReconnectInterval: 3000, // Time in ms to attempt reconnection
   wsMaxReconnectAttempts: 5,
+  // API keys configuration
+  apiKeysConfigured: false, // Set to true when API keys are configured
+  // Set your model provider here - 'ionos', 'openai', etc.
+  modelProvider: 'mock',
 };
 
 export default {

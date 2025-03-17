@@ -11,6 +11,8 @@ interface ChatMessageProps {
 
 const ChatMessage = ({ message }: ChatMessageProps) => {
   const isUser = message.role === "user";
+  const isPending = message.status === "pending";
+  const isStreaming = message.isStreaming;
 
   return (
     <div
@@ -24,7 +26,8 @@ const ChatMessage = ({ message }: ChatMessageProps) => {
           "flex max-w-[80%] flex-col gap-2 rounded-lg p-4",
           isUser
             ? "bg-primary text-primary-foreground"
-            : "bg-muted text-muted-foreground"
+            : "bg-muted text-muted-foreground",
+          isPending && "opacity-70"
         )}
       >
         <div className="flex items-center gap-2">
@@ -37,8 +40,16 @@ const ChatMessage = ({ message }: ChatMessageProps) => {
           <div className="text-xs text-muted-foreground/70">
             {formatDistanceToNow(new Date(message.timestamp), { addSuffix: true })}
           </div>
+          {isPending && (
+            <div className="text-xs italic text-muted-foreground/70">Processing...</div>
+          )}
         </div>
-        <div className="whitespace-pre-wrap text-sm">{message.content}</div>
+        <div className="whitespace-pre-wrap text-sm">
+          {message.content}
+          {isStreaming && (
+            <span className="inline-block ml-1 animate-pulse">▋</span>
+          )}
+        </div>
       </div>
     </div>
   );
