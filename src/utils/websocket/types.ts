@@ -26,3 +26,7 @@ export interface WebSocketServiceInterface {
   isSocketConnected(): boolean;
 }
 
+// Extended interface that includes mockConnect for the mock service
+export interface MockWebSocketServiceInterface extends WebSocketServiceInterface {
+  mockConnect(): void;
+}

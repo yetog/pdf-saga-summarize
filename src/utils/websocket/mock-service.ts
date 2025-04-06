@@ -1,5 +1,5 @@
 
-import { WebSocketMessage, WebSocketService } from './types';
+import { WebSocketMessage, WebSocketServiceInterface } from './types';
 
 type Subscription = {
   event: string;
@@ -11,7 +11,7 @@ type ConnectionSubscription = (isConnected: boolean) => void;
 /**
  * Mock WebSocket service for development/preview without a real backend
  */
-class MockWebSocketService implements WebSocketService {
+class MockWebSocketService implements WebSocketServiceInterface {
   private isConnected = false;
   private subscriptions: Subscription[] = [];
   private connectionSubscriptions: ConnectionSubscription[] = [];
@@ -33,12 +33,13 @@ class MockWebSocketService implements WebSocketService {
     this.notifyConnectionSubscribers();
   }
 
-  send(event: string, data: any): void {
+  send(event: string, data: any): boolean {
     console.log(`[MockWS] Sending event: ${event}`, data);
     // Simulate echoing the event back for testing
     setTimeout(() => {
       this.mockReceiveEvent(event, data);
     }, 500);
+    return true; // Return true to indicate success
   }
 
   subscribe(event: string, callback: (data: any) => void): () => void {
@@ -58,6 +59,11 @@ class MockWebSocketService implements WebSocketService {
     return () => {
       this.connectionSubscriptions = this.connectionSubscriptions.filter(sub => sub !== callback);
     };
+  }
+
+  // Add the isSocketConnected method to match the interface
+  isSocketConnected(): boolean {
+    return this.isConnected;
   }
 
   // Mock receiving an event

@@ -1,7 +1,7 @@
 
 import { toast } from "sonner";
 import { API } from "@/config";
-import { getWebSocketService } from "./websocket";
+import { getWebSocketService, getMockWebSocketService } from "./websocket";
 
 // Error handling utility
 const handleApiError = (error: unknown) => {
@@ -206,8 +206,8 @@ export const initializeWebSocket = (): void => {
   } else {
     // Simulate WebSocket connection for consistency
     setTimeout(() => {
-      const wsService = getWebSocketService();
-      wsService.mockConnect();
+      const mockService = getMockWebSocketService();
+      mockService.mockConnect();
     }, 1000);
   }
 };

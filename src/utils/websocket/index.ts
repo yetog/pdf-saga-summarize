@@ -3,7 +3,7 @@
  * WebSocket service exports
  */
 import { API } from "@/config";
-import { WebSocketServiceInterface } from './types';
+import { WebSocketServiceInterface, MockWebSocketServiceInterface } from './types';
 import { websocketService } from './real-service';
 import { mockWebSocketService } from './mock-service';
 
@@ -15,6 +15,11 @@ export * from './types';
  */
 export const getWebSocketService = (): WebSocketServiceInterface => {
   return API.useMockApi ? mockWebSocketService : websocketService;
+};
+
+// Get mock service with full interface including mockConnect
+export const getMockWebSocketService = (): MockWebSocketServiceInterface => {
+  return mockWebSocketService as MockWebSocketServiceInterface;
 };
 
 // Re-export the individual instances for direct use if needed
