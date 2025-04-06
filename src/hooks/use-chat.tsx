@@ -2,7 +2,8 @@
 import { useState, useCallback, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { ChatMessage, ChatState, ChatModelConfig, DEFAULT_MODEL_CONFIG } from '@/utils/chat/types';
-import { API, APP_CONFIG } from '@/config';
+import { API, APP_CONFIG, IONOS_CONFIG } from '@/config';
+import { toast } from 'sonner';
 
 interface UseChatOptions {
   initialMessages?: ChatMessage[];
@@ -35,7 +36,159 @@ export function useChat({
     };
   }, []);
 
-  // Mock function - replace with actual API call to Ionos AI model hub
+  // Function to call the Ionos AI Model Hub API
+  const callIonosAI = async (messages: { role: string; content: string }[], context: string) => {
+    // Base URL for the Ionos AI Model Hub API
+    const url = `${IONOS_CONFIG.baseUrl}/chat/completions`;
+    
+    // Prepare system message with PDF context
+    const systemMessage = {
+      role: 'system',
+      content: `You are a helpful assistant for answering questions about PDF documents. 
+      Use the following document information as context for answering questions:
+      ${context}`
+    };
+    
+    // Full messages array including system message
+    const fullMessages = [
+      systemMessage,
+      ...messages
+    ];
+    
+    // Request body
+    const body = JSON.stringify({
+      model: IONOS_CONFIG.chatModelId,
+      messages: fullMessages,
+      temperature: config.temperature,
+      max_tokens: config.maxTokens,
+      stream: config.streamResponse,
+    });
+    
+    // Headers
+    const headers = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${IONOS_CONFIG.apiKey}`,
+    };
+    
+    // Make the request
+    if (config.streamResponse) {
+      // For streaming responses
+      const response = await fetch(url, {
+        method: 'POST',
+        headers,
+        body,
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error?.message || `API request failed with status ${response.status}`);
+      }
+      
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error('Response body reader could not be created');
+      
+      return { reader, response };
+    } else {
+      // For non-streaming responses
+      const response = await fetch(url, {
+        method: 'POST',
+        headers,
+        body,
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error?.message || `API request failed with status ${response.status}`);
+      }
+      
+      const data = await response.json();
+      return data.choices[0].message.content;
+    }
+  };
+
+  // Process Ionos AI streaming response
+  const processStream = async (reader: ReadableStreamDefaultReader<Uint8Array>, assistantMessageId: string) => {
+    const decoder = new TextDecoder();
+    let accumulatedResponse = '';
+    
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        
+        const chunk = decoder.decode(value, { stream: true });
+        
+        // Process the chunk - in real Ionos API, you would need to parse the SSE data
+        // This is a simplified version
+        const lines = chunk.split('\n').filter(line => line.trim() !== '');
+        
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6);
+            
+            // Skip the [DONE] message
+            if (data === '[DONE]') continue;
+            
+            try {
+              const parsed = JSON.parse(data);
+              const content = parsed.choices[0]?.delta?.content || '';
+              
+              if (content) {
+                accumulatedResponse += content;
+                
+                // Update the message content
+                setState(prevState => {
+                  const updatedMessages = [...prevState.messages];
+                  const assistantMessageIndex = updatedMessages.findIndex(m => m.id === assistantMessageId);
+                  
+                  if (assistantMessageIndex !== -1) {
+                    updatedMessages[assistantMessageIndex] = {
+                      ...updatedMessages[assistantMessageIndex],
+                      content: accumulatedResponse,
+                    };
+                  }
+                  
+                  return {
+                    ...prevState,
+                    messages: updatedMessages,
+                  };
+                });
+              }
+            } catch (e) {
+              console.error('Error parsing stream data:', e);
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error reading stream:', error);
+      throw error;
+    } finally {
+      // Update the message as complete
+      setState(prevState => {
+        const updatedMessages = [...prevState.messages];
+        const assistantMessageIndex = updatedMessages.findIndex(m => m.id === assistantMessageId);
+        
+        if (assistantMessageIndex !== -1) {
+          updatedMessages[assistantMessageIndex] = {
+            ...updatedMessages[assistantMessageIndex],
+            status: 'complete',
+            isStreaming: false,
+          };
+        }
+        
+        return {
+          ...prevState,
+          messages: updatedMessages,
+          isLoading: false,
+          isTyping: false,
+        };
+      });
+    }
+    
+    return accumulatedResponse;
+  };
+
   const sendMessage = useCallback(async (content: string, context: string) => {
     if (!content.trim()) return;
 
@@ -67,10 +220,46 @@ export function useChat({
     }));
 
     try {
-      // This is where you'd integrate with Ionos AI model hub
-      // For now, we'll use a mock response
-      
-      if (API.useMockApi || !APP_CONFIG.apiKeysConfigured) {
+      // If API keys are configured and we're not using mock API, call Ionos AI
+      if (APP_CONFIG.apiKeysConfigured && !API.useMockApi) {
+        const messageHistory = state.messages.map(m => ({
+          role: m.role,
+          content: m.content
+        }));
+        
+        // Add the new user message
+        messageHistory.push({
+          role: 'user',
+          content
+        });
+        
+        if (config.streamResponse) {
+          const { reader } = await callIonosAI(messageHistory, context);
+          await processStream(reader, assistantMessage.id);
+        } else {
+          const response = await callIonosAI(messageHistory, context);
+          
+          setState(prevState => {
+            const updatedMessages = [...prevState.messages];
+            const assistantMessageIndex = updatedMessages.length - 1;
+            
+            updatedMessages[assistantMessageIndex] = {
+              ...updatedMessages[assistantMessageIndex],
+              content: response,
+              status: 'complete',
+              isStreaming: false,
+            };
+            
+            return {
+              ...prevState,
+              messages: updatedMessages,
+              isLoading: false,
+              isTyping: false,
+            };
+          });
+        }
+      } else {
+        // Use mock API as fallback
         // Simulate API call delay
         await new Promise(resolve => setTimeout(resolve, 1000));
         
@@ -140,27 +329,6 @@ export function useChat({
             };
           });
         }
-      } else {
-        // Real API integration would go here
-        // const response = await fetch(`${API.baseUrl}/chat`, {
-        //   method: 'POST',
-        //   headers: {
-        //     'Content-Type': 'application/json',
-        //   },
-        //   body: JSON.stringify({
-        //     model: config.modelId,
-        //     messages: [
-        //       { role: 'system', content: `You are a helpful PDF assistant. Use the following context to answer questions: ${context}` },
-        //       ...state.messages.map(m => ({ role: m.role, content: m.content })),
-        //       { role: 'user', content }
-        //     ],
-        //     temperature: config.temperature,
-        //     max_tokens: config.maxTokens,
-        //     stream: config.streamResponse,
-        //   }),
-        // });
-        
-        // TODO: Handle streaming and non-streaming responses from the actual API
       }
 
       // Callback with the final response
@@ -192,6 +360,7 @@ export function useChat({
         };
       });
       
+      toast.error(`Error: ${errorMessage}`);
       console.error('Error sending message:', error);
     }
   }, [state.messages, config, onResponse]);

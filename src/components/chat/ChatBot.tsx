@@ -54,6 +54,11 @@ const ChatBot = ({ summary, fileName }: ChatBotProps) => {
             <span className="font-medium">PDF Assistant</span>
           </div>
           <div className="flex items-center gap-2">
+            {apiKeyConfigured && (
+              <div className="text-xs text-green-500 font-medium">
+                API connected
+              </div>
+            )}
             {!apiKeyConfigured && (
               <div className="text-xs text-amber-500 font-medium">
                 API key required
