@@ -7,6 +7,7 @@ import { Progress } from '@/components/ui/progress';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { API } from '@/config';
 
 interface ProcessFileProps {
   file: File | null;
@@ -53,7 +54,8 @@ const ProcessFile: React.FC<ProcessFileProps> = ({
   };
   
   const renderBackendOfflineWarning = () => {
-    if (backendStatus !== 'offline') return null;
+    // Only show warning if we're trying to use a real backend but it's offline
+    if (backendStatus !== 'offline' || API.useMockApi) return null;
     
     return (
       <Alert variant="destructive" className="mt-6 mx-auto max-w-md">
@@ -118,7 +120,7 @@ const ProcessFile: React.FC<ProcessFileProps> = ({
               isLoading={isProcessing}
               size="lg"
               className={isMobile ? "w-full" : ""}
-              disabled={isProcessing || backendStatus === 'offline'}
+              disabled={isProcessing && !API.useMockApi && backendStatus === 'offline'}
             >
               {isProcessing ? 'Processing...' : 'Generate Summary'}
             </Button>

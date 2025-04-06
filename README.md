@@ -71,4 +71,4 @@ The frontend is configured to connect to a backend at:
 - Development: http://localhost:8000
 - Production: Relative path /api on the same domain
 
-You can toggle the `useMockApi` flag in `src/config.ts` to enable/disable mock mode.
+You can toggle the `useMockApi` flag in `src/config.ts` to enable/disable mock mode. In the current configuration, mock mode is enabled by default.

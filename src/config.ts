@@ -13,12 +13,12 @@ const API_CONFIG = {
   development: {
     baseUrl: 'http://localhost:8000',
     wsUrl: 'ws://localhost:8000/ws',
-    useMockApi: true, // Use mock API in development if backend is not available
+    useMockApi: true, // Always use mock API in this preview environment
   },
   production: {
     baseUrl: '/api', // Use relative URL in production (API is likely on same domain)
     wsUrl: 'wss://your-production-domain.com/ws',
-    useMockApi: false,
+    useMockApi: true, // Using mock API in production until a real backend is set up
   },
 };
 

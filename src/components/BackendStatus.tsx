@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { AlertCircle, CheckCircle, Loader2, Radio } from 'lucide-react';
+import { API } from '@/config';
 
 interface BackendStatusProps {
   status: 'online' | 'offline' | 'checking';
@@ -8,6 +9,16 @@ interface BackendStatusProps {
 }
 
 const BackendStatus: React.FC<BackendStatusProps> = ({ status, wsConnected }) => {
+  // If we're explicitly using mock API, show a different message
+  if (API.useMockApi) {
+    return (
+      <div className="flex items-center text-xs text-amber-500 mb-4">
+        <AlertCircle className="h-3 w-3 mr-1" />
+        <span>Using demo mode with mock data</span>
+      </div>
+    );
+  }
+  
   if (status === 'checking') {
     return (
       <div className="flex items-center text-xs text-muted-foreground mb-4 animate-pulse">
