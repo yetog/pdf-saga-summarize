@@ -1,98 +1,93 @@
 
+import { WebSocketMessage, WebSocketService } from './types';
+
+type Subscription = {
+  event: string;
+  callback: (data: any) => void;
+};
+
+type ConnectionSubscription = (isConnected: boolean) => void;
+
 /**
- * Mock WebSocket service implementation for development
+ * Mock WebSocket service for development/preview without a real backend
  */
-import { BaseWebSocketService } from './base-service';
-import { toast } from "sonner";
+class MockWebSocketService implements WebSocketService {
+  private isConnected = false;
+  private subscriptions: Subscription[] = [];
+  private connectionSubscriptions: ConnectionSubscription[] = [];
 
-export class MockWebSocketService extends BaseWebSocketService {
-  private mockConnected = true;
-  private mockConnectionTimeout: number | null = null;
+  connect(): void {
+    // Do nothing in mock mode
+    console.log('[MockWS] Connection not needed in mock mode');
+  }
 
-  constructor() {
-    super();
+  // Special method for mock connection simulation
+  mockConnect(): void {
+    console.log('[MockWS] Simulating connection');
     this.isConnected = true;
-    
-    // Process any queued messages immediately
+    this.notifyConnectionSubscribers();
+  }
+
+  disconnect(): void {
+    this.isConnected = false;
+    this.notifyConnectionSubscribers();
+  }
+
+  send(event: string, data: any): void {
+    console.log(`[MockWS] Sending event: ${event}`, data);
+    // Simulate echoing the event back for testing
     setTimeout(() => {
-      this.processQueue();
+      this.mockReceiveEvent(event, data);
     }, 500);
   }
-  
-  public connect(): void {
-    // Simulate successful connection after a delay
-    if (!this.mockConnected) {
-      console.log('Mock WebSocket reconnecting...');
-      this.mockConnectionTimeout = window.setTimeout(() => {
-        this.mockConnected = true;
-        this.notifyConnectionHandlers(true);
-        toast.success('WebSocket connection restored');
-        this.processQueue();
-      }, 2000);
-    } else {
-      this.notifyConnectionHandlers(true);
-    }
+
+  subscribe(event: string, callback: (data: any) => void): () => void {
+    const subscription = { event, callback };
+    this.subscriptions.push(subscription);
+
+    return () => {
+      this.subscriptions = this.subscriptions.filter(sub => sub !== subscription);
+    };
   }
-  
-  public disconnect(): void {
-    if (this.mockConnectionTimeout) {
-      clearTimeout(this.mockConnectionTimeout);
-      this.mockConnectionTimeout = null;
-    }
-    
-    this.mockConnected = false;
-    this.notifyConnectionHandlers(false);
+
+  subscribeToConnection(callback: (isConnected: boolean) => void): () => void {
+    this.connectionSubscriptions.push(callback);
+    // Immediately notify the new subscriber
+    callback(this.isConnected);
+
+    return () => {
+      this.connectionSubscriptions = this.connectionSubscriptions.filter(sub => sub !== callback);
+    };
   }
-  
-  public send(type: string, payload: any): boolean {
-    console.log('Mock WebSocket send:', { type, payload });
-    
-    if (!this.mockConnected) {
-      console.log('Mock WebSocket not connected, queueing message');
-      this.queueMessage(type, payload);
-      return false;
+
+  // Mock receiving an event
+  private mockReceiveEvent(event: string, data: any): void {
+    if (event === 'request_summary') {
+      // Simulate progress updates
+      this.simulateProgressUpdates(data.id);
     }
+
+    // Find and call all callbacks for this event
+    this.subscriptions
+      .filter(sub => sub.event === event)
+      .forEach(sub => sub.callback(data));
+  }
+
+  // Simulate progress updates for summary generation
+  private simulateProgressUpdates(fileId: string): void {
+    const progressSteps = [10, 30, 50, 70, 90, 100];
     
-    // Simulate processing and response for summarization requests
-    if (type === 'request_summary') {
+    progressSteps.forEach((progress, index) => {
       setTimeout(() => {
-        this.handleMockSummaryResponse(payload.id);
-      }, 3000);
-    } else if (type === 'heartbeat') {
-      // Respond to heartbeats immediately
-      setTimeout(() => {
-        if (this.messageHandlers.has('pong')) {
-          this.messageHandlers.get('pong')?.forEach(handler => {
-            handler({ timestamp: Date.now() });
-          });
-        }
-      }, 50);
-    }
-    
-    // Occasionally simulate network issues for testing the queue
-    if (Math.random() < 0.1) {
-      console.log('Simulating temporary WebSocket disconnection for testing');
-      this.mockConnected = false;
-      this.notifyConnectionHandlers(false);
-      toast.error('WebSocket connection lost (simulated)');
-      
-      // Reconnect after a few seconds
-      this.mockConnectionTimeout = window.setTimeout(() => {
-        this.mockConnected = true;
-        this.notifyConnectionHandlers(true);
-        toast.success('WebSocket connection restored');
-        this.processQueue();
-      }, 5000);
-      
-      return false;
-    }
-    
-    return true;
-  }
-  
-  private handleMockSummaryResponse(fileId: string): void {
-    // Generate a mock summary response
-    const mockSummary = `This document provides a comprehensive analysis of modern user interface design principles, with a particular focus on minimalist approaches. The author argues that successful UI design balances aesthetic considerations with functional requirements.
+        // Notify progress subscribers
+        this.subscriptions
+          .filter(sub => sub.event === 'summary_progress')
+          .forEach(sub => sub.callback({ fileId, progress }));
+        
+        // When complete, notify completion subscribers
+        if (progress === 100) {
+          setTimeout(() => {
+            const mockSummary = `This document provides a comprehensive analysis of modern user interface design principles, with a particular focus on minimalist approaches. The author argues that successful UI design balances aesthetic considerations with functional requirements.
 
 Key points identified include:
 
@@ -104,20 +99,24 @@ Key points identified include:
 The research demonstrates that users complete tasks 20% faster when interacting with interfaces that follow these minimalist principles. Additionally, user satisfaction scores were 35% higher for applications that prioritized simplicity and clarity in their design.
 
 The document concludes with practical recommendations for implementing these findings, suggesting that designers should start with essential functionality and carefully evaluate each additional element before inclusion.`;
-    
-    // Notify handlers of the mock summary response
-    if (this.messageHandlers.has('summary_ready')) {
-      this.messageHandlers.get('summary_ready')?.forEach(handler => {
-        handler({
-          fileId,
-          summary: mockSummary,
-          status: 'completed'
-        });
-      });
-    }
+
+            this.subscriptions
+              .filter(sub => sub.event === 'summary_ready')
+              .forEach(sub => sub.callback({ 
+                fileId, 
+                status: 'completed', 
+                summary: mockSummary 
+              }));
+          }, 500);
+        }
+      }, (index + 1) * 500);
+    });
+  }
+
+  private notifyConnectionSubscribers(): void {
+    this.connectionSubscriptions.forEach(callback => callback(this.isConnected));
   }
 }
 
-// Export a singleton mock instance
+// Export a singleton instance
 export const mockWebSocketService = new MockWebSocketService();
-

@@ -19,8 +19,12 @@ const Index = () => {
   const [viewMode, setViewMode] = useState<'upload' | 'summary'>('upload');
   
   // Backend connection state
-  const [backendStatus, setBackendStatus] = useState<'online' | 'offline' | 'checking'>('checking');
-  const [wsConnected, setWsConnected] = useState<boolean | undefined>(undefined);
+  const [backendStatus, setBackendStatus] = useState<'online' | 'offline' | 'checking'>(
+    API.useMockApi ? 'online' : 'checking'
+  );
+  const [wsConnected, setWsConnected] = useState<boolean | undefined>(
+    API.useMockApi ? true : undefined
+  );
   
   // Error handling state
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -39,8 +43,12 @@ const Index = () => {
     };
   }, []);
   
-  // Check backend health periodically
+  // Check backend health periodically - only if not using mock API
   useEffect(() => {
+    if (API.useMockApi) {
+      return; // Skip backend checks when using mock API
+    }
+    
     const checkStatus = async () => {
       try {
         const isOnline = await checkBackendHealth();
@@ -71,11 +79,6 @@ const Index = () => {
   
   const handleProcessFile = async () => {
     if (!file) return;
-    
-    if (backendStatus === 'offline' && !API.useMockApi) {
-      toast.error('Backend service is offline. Please try again later.');
-      return;
-    }
     
     try {
       setIsProcessing(true);
